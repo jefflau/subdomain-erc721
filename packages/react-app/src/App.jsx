@@ -91,6 +91,7 @@ function App() {
           and give you a form to interact with it locally
       */}
 
+      <Contract name="ENSRegistry" provider={userProvider} address={address} />
       <Contract name="MultiSig" provider={userProvider} address={address} />
       <Contract name="Test" provider={userProvider} address={address} />
 
