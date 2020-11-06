@@ -32,6 +32,19 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
 
     ENS public ens;
 
+    function owner(bytes32 label) public override view returns (address) {
+        if (domains[label].owner != address(0x0)) {
+            return domains[label].owner;
+        }
+
+        // Deed domainDeed = deed(label);
+        // if (domainDeed.owner() != address(this)) {
+        //     return address(0x0);
+        // }
+
+        // return domainDeed.previousOwner();
+    }
+
     modifier ownerOnly(bytes32 label) {
         require(owner(label) == msg.sender);
         _;
@@ -49,8 +62,46 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
 
     constructor() public ERC721("ENS Name", "ENS") {}
 
+    // TODO move to constructor and take as argument
     function setENS(ENS _ens) public {
         ens = _ens;
+    }
+
+    function configureDomainFor(
+        string memory name,
+        uint256 price,
+        uint256 referralFeePPM,
+        address payable _owner,
+        address _transfer
+    ) public ownerOnly(keccak256(bytes(name))) {
+        bytes32 label = keccak256(bytes(name));
+        Domain storage domain = domains[label];
+
+        // Don't allow changing the transfer address once set. Treat 0 as "don't change" for convenience.
+        require(
+            domain.transferAddress == address(0x0) ||
+                _transfer == address(0x0) ||
+                domain.transferAddress == _transfer
+        );
+
+        if (domain.owner != _owner) {
+            domain.owner = _owner;
+        }
+
+        if (keccak256(abi.encodePacked(domain.name)) != label) {
+            // New listing
+            domain.name = name;
+        }
+
+        domain.price = price;
+        domain.referralFeePPM = referralFeePPM;
+
+        // if (domain.transferAddress != _transfer && _transfer != address(0x0)) {
+        //     domain.transferAddress = _transfer;
+        //     emit TransferAddressSet(label, _transfer);
+        // }
+
+        emit DomainConfigured(label);
     }
 
     function doRegistration(
@@ -154,6 +205,4 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
 
         return newItemId;
     }
-
-    function owner(bytes32 label) public view returns (address) {}
 }
