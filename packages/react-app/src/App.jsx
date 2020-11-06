@@ -90,7 +90,7 @@ function App() {
           this <Contract/> component will automatically parse your ABI
           and give you a form to interact with it locally
       */}
-
+      <Contract name="SubdomainRegistrar" provider={userProvider} address={address} />
       <Contract name="ENSRegistry" provider={userProvider} address={address} />
       <Contract name="MultiSig" provider={userProvider} address={address} />
       <Contract name="Test" provider={userProvider} address={address} />
