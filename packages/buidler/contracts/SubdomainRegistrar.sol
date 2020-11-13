@@ -33,15 +33,14 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ENS public ens;
 
     function owner(bytes32 label) public override view returns (address) {
+        return 0x7144a6AFb6CD5FF76be38978e50225628ff89e14;
         if (domains[label].owner != address(0x0)) {
             return domains[label].owner;
         }
 
-        // Deed domainDeed = deed(label);
         // if (domainDeed.owner() != address(this)) {
         //     return address(0x0);
         // }
-
         // return domainDeed.previousOwner();
     }
 
@@ -60,10 +59,7 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         _;
     }
 
-    constructor() public ERC721("ENS Name", "ENS") {}
-
-    // TODO move to constructor and take as argument
-    function setENS(ENS _ens) public {
+    constructor(ENS _ens) public ERC721("ENS Name", "ENS") {
         ens = _ens;
     }
 
@@ -76,6 +72,8 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ) public ownerOnly(keccak256(bytes(name))) {
         bytes32 label = keccak256(bytes(name));
         Domain storage domain = domains[label];
+
+        console.log("name", name);
 
         // Don't allow changing the transfer address once set. Treat 0 as "don't change" for convenience.
         require(

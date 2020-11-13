@@ -92,6 +92,7 @@ function App() {
       */}
       <Contract name="SubdomainRegistrar" provider={userProvider} address={address} />
       <Contract name="ENSRegistry" provider={userProvider} address={address} />
+      <Contract name="PublicResolver" provider={userProvider} address={address} />
 
       <Hints address={address} yourLocalBalance={yourLocalBalance} price={price} mainnetProvider={mainnetProvider} />
 

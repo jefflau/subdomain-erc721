@@ -5,16 +5,20 @@ const { utils } = ethers
 const n = require('eth-ens-namehash')
 const namehash = n.hash
 
+const addresses = {}
+
 async function deploy(name, _args) {
   const args = _args || []
 
   console.log(`📄 ${name}`)
   const contractArtifacts = await ethers.getContractFactory(name)
+  console.log(contractArtifacts)
   const contract = await contractArtifacts.deploy(...args)
   console.log(chalk.cyan(name), 'deployed to:', chalk.magenta(contract.address))
   fs.writeFileSync(`artifacts/${name}.address`, contract.address)
   console.log('\n')
   contract.name = name
+  addresses[name] = contract.address
   return contract
 }
 
@@ -35,10 +39,18 @@ function readArgumentsFile(contractName) {
   return args
 }
 
+const NO_AUTO_DEPLOY = ['PublicResolver.sol', 'SubdomainRegistrar.sol']
+
 async function autoDeploy() {
   const contractList = fs.readdirSync(config.paths.sources)
   return contractList
-    .filter((fileName) => isSolidity(fileName))
+    .filter((fileName) => {
+      if (NO_AUTO_DEPLOY.includes(fileName)) {
+        //don't auto deploy this list of Solidity files
+        return false
+      }
+      return isSolidity(fileName)
+    })
     .reduce((lastDeployment, fileName) => {
       const contractName = fileName.replace('.sol', '')
       const args = readArgumentsFile(contractName)
@@ -54,6 +66,7 @@ async function main() {
   console.log('📡 Deploy \n')
   // auto deploy to read contract directory and deploy them all (add ".args" files for arguments)
   const contractList = await autoDeploy()
+  console.log('finish auto deploy')
 
   //console.log('contractList', contractList)
   const ensRegistry = contractList.find(
@@ -63,12 +76,17 @@ async function main() {
     '0x0000000000000000000000000000000000000000000000000000000000000000'
 
   const rootOwner = await ensRegistry.owner(ROOT_NODE)
-  console.log('rootOwner', rootOwner)
   const [owner, addr1] = await ethers.getSigners()
   const account = await owner.getAddress()
 
   const hash = namehash('vitalik.eth')
-  console.log('hash', hash, account)
+
+  const subDomainRegistrar = await deploy('SubdomainRegistrar', [
+    addresses['ENSRegistry'],
+  ])
+  const publicResolver = await deploy('PublicResolver', [
+    addresses['ENSRegistry'],
+  ])
 
   // setup .eth
   await ensRegistry.setSubnodeOwner(
