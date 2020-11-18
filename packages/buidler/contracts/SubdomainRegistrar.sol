@@ -6,7 +6,6 @@ import "../interfaces/Resolver.sol";
 import "../interfaces/ISubdomainRegistrar.sol";
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 struct Domain {
     string name;
@@ -18,8 +17,6 @@ struct Domain {
 
 // SPDX-License-Identifier: MIT
 contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
     // namehash('eth')
     bytes32
         public constant TLD_NODE = 0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae;
@@ -37,9 +34,6 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         if (_exists(uint256(label))) {
             return ownerOf(uint256(label));
         }
-        // if (domains[label].owner != address(0x0)) {
-        //     return domains[label].owner;
-        // }
 
         // TODO switch with .eth regisrant owner instead of registry
         bytes32 subnode = keccak256(abi.encodePacked(TLD_NODE, label));
@@ -137,6 +131,7 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         // Pass ownership of the new subdomain to the registrant
         ens.setOwner(subnode, subdomainOwner);
 
+        // Mint the ERC721 token
         mintERC721(uint256(label), subdomainOwner, "");
     }
 
