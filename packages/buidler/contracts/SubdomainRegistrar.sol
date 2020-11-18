@@ -33,18 +33,18 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ENS public ens;
 
     function owner(bytes32 label) public override view returns (address) {
-        if (domains[label].owner != address(0x0)) {
-            return domains[label].owner;
+        // Check owner of NFT
+        if (_exists(uint256(label))) {
+            return ownerOf(uint256(label));
         }
+        // if (domains[label].owner != address(0x0)) {
+        //     return domains[label].owner;
+        // }
 
         // TODO switch with .eth regisrant owner instead of registry
         bytes32 subnode = keccak256(abi.encodePacked(TLD_NODE, label));
 
         return ens.owner(subnode);
-        // if (domainDeed.owner() != address(this)) {
-        //     return address(0x0);
-        // }
-        // return domainDeed.previousOwner();
     }
 
     modifier ownerOnly(bytes32 label) {
@@ -224,7 +224,6 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ) public returns (uint256) {
         _mint(subdomainOwner, id);
         _setTokenURI(id, tokenURI);
-
         return id;
     }
 
