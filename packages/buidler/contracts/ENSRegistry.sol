@@ -1,5 +1,6 @@
 pragma solidity >=0.6.0 <0.7.0;
 
+import "@nomiclabs/buidler/console.sol";
 import "../interfaces/ENS.sol";
 
 /**
@@ -18,7 +19,11 @@ contract ENSRegistry is ENS {
     // Permits modifications only by the owner of the specified node.
     modifier authorised(bytes32 node) {
         address owner = records[node].owner;
-        require(owner == msg.sender || operators[owner][msg.sender]);
+        console.log("owner", owner, msg.sender);
+        require(
+            owner == msg.sender || operators[owner][msg.sender],
+            "owner is not sender or operator"
+        );
         _;
     }
 

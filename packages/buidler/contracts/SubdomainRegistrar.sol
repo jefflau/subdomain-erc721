@@ -33,11 +33,14 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ENS public ens;
 
     function owner(bytes32 label) public override view returns (address) {
-        return 0x7144a6AFb6CD5FF76be38978e50225628ff89e14;
         if (domains[label].owner != address(0x0)) {
             return domains[label].owner;
         }
 
+        // TODO switch with .eth regisrant owner instead of registry
+        bytes32 subnode = keccak256(abi.encodePacked(TLD_NODE, label));
+
+        return ens.owner(subnode);
         // if (domainDeed.owner() != address(this)) {
         //     return address(0x0);
         // }
@@ -45,7 +48,8 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     }
 
     modifier ownerOnly(bytes32 label) {
-        require(owner(label) == msg.sender);
+        require(owner(label) == msg.sender, "Not owner"); //TODO fix only owner
+        //require(owner(label) == msg.sender);
         _;
     }
 
@@ -63,6 +67,20 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         ens = _ens;
     }
 
+    function configureDomain(
+        string memory name,
+        uint256 price,
+        uint256 referralFeePPM
+    ) public ownerOnly(keccak256(bytes(name))) {
+        configureDomainFor(
+            name,
+            price,
+            referralFeePPM,
+            msg.sender,
+            address(0x0)
+        );
+    }
+
     function configureDomainFor(
         string memory name,
         uint256 price,
@@ -72,8 +90,6 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     ) public ownerOnly(keccak256(bytes(name))) {
         bytes32 label = keccak256(bytes(name));
         Domain storage domain = domains[label];
-
-        console.log("name", name);
 
         // Don't allow changing the transfer address once set. Treat 0 as "don't change" for convenience.
         require(
@@ -120,6 +136,8 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
 
         // Pass ownership of the new subdomain to the registrant
         ens.setOwner(subnode, subdomainOwner);
+
+        mintERC721(uint256(label), subdomainOwner, "");
     }
 
     function register(
@@ -137,7 +155,8 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         require(
             ens.owner(
                 keccak256(abi.encodePacked(domainNode, subdomainLabel))
-            ) == address(0)
+            ) == address(0),
+            "Subdomain already registered"
         );
 
         Domain storage domain = domains[label];
@@ -146,14 +165,14 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         require(keccak256(abi.encodePacked(domain.name)) == label);
 
         // User must have paid enough
-        require(msg.value >= domain.price);
+        require(msg.value >= domain.price, "Not enough ether provided");
 
-        // Send any extra back
+        // // Send any extra back
         if (msg.value > domain.price) {
             msg.sender.transfer(msg.value - domain.price);
         }
 
-        // Send any referral fee
+        // // Send any referral fee
         uint256 total = domain.price;
         if (
             domain.referralFeePPM * domain.price > 0 &&
@@ -166,7 +185,7 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
             total -= referralFee;
         }
 
-        // Send the registration fee
+        // // Send the registration fee
         if (total > 0) {
             domain.owner.transfer(total);
         }
@@ -191,16 +210,26 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         );
     }
 
-    function awardItem(address player, string memory tokenURI)
-        public
-        returns (uint256)
-    {
-        _tokenIds.increment();
+    /**
+     * @dev Mint Erc721 for the subdomain
+     * @param id The token ID (keccak256 of the label).
+     * @param subdomainOwner The address that should own the registration.
+     * @param tokenURI tokenURI address
+     */
 
-        uint256 newItemId = _tokenIds.current();
-        _mint(player, newItemId);
-        _setTokenURI(newItemId, tokenURI);
+    function mintERC721(
+        uint256 id,
+        address subdomainOwner,
+        string memory tokenURI
+    ) public returns (uint256) {
+        _mint(subdomainOwner, id);
+        _setTokenURI(id, tokenURI);
 
-        return newItemId;
+        return id;
+    }
+
+    function reclaim(uint256 id, address subdomainOwner) external {
+        require(_isApprovedOrOwner(msg.sender, id));
+        ens.setSubnodeOwner(TLD_NODE, bytes32(id), subdomainOwner);
     }
 }

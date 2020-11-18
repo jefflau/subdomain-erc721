@@ -12,7 +12,6 @@ async function deploy(name, _args) {
 
   console.log(`📄 ${name}`)
   const contractArtifacts = await ethers.getContractFactory(name)
-  console.log(contractArtifacts)
   const contract = await contractArtifacts.deploy(...args)
   console.log(chalk.cyan(name), 'deployed to:', chalk.magenta(contract.address))
   fs.writeFileSync(`artifacts/${name}.address`, contract.address)
@@ -79,8 +78,6 @@ async function main() {
   const [owner, addr1] = await ethers.getSigners()
   const account = await owner.getAddress()
 
-  const hash = namehash('vitalik.eth')
-
   const subDomainRegistrar = await deploy('SubdomainRegistrar', [
     addresses['ENSRegistry'],
   ])
@@ -112,6 +109,34 @@ async function main() {
   // const exampleToken = await deploy("ExampleToken")
   // const examplePriceOracle = await deploy("ExamplePriceOracle")
   // const smartContractWallet = await deploy("SmartContractWallet",[exampleToken.address,examplePriceOracle.address])
+
+  // setup subdomain registrar
+  //console.log(subDomainRegistrar)
+  await subDomainRegistrar.configureDomain('ens', '1000000', 0)
+  await ensRegistry.setOwner(namehash('ens.eth'), subDomainRegistrar.address)
+  await subDomainRegistrar.register(
+    '0x5cee339e13375638553bdf5a6e36ba80fb9f6a4f0783680884d92b558aa471da',
+    'awesome',
+    account,
+    account,
+    addresses['PublicResolver'],
+    {
+      value: '1000000',
+    }
+  )
+
+  // await subDomainRegistrar.register(
+  //   '0x5cee339e13375638553bdf5a6e36ba80fb9f6a4f0783680884d92b558aa471da',
+  //   'awesome',
+  //   account,
+  //   account,
+  //   addresses['PublicResolver'],
+  //   {
+  //     value: '100000',
+  //   }
+  // )
+
+  console.log('configured ens.eth in subdomain Registrar')
 }
 
 main()
