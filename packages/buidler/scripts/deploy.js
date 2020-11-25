@@ -38,7 +38,11 @@ function readArgumentsFile(contractName) {
   return args
 }
 
-const NO_AUTO_DEPLOY = ['PublicResolver.sol', 'SubdomainRegistrar.sol']
+const NO_AUTO_DEPLOY = [
+  'PublicResolver.sol',
+  'SubdomainRegistrar.sol',
+  'RestrictedNameWrapper.sol',
+]
 
 async function autoDeploy() {
   const contractList = fs.readdirSync(config.paths.sources)
@@ -68,39 +72,42 @@ async function main() {
   console.log('finish auto deploy')
 
   //console.log('contractList', contractList)
-  const ensRegistry = contractList.find(
+  const EnsRegistry = contractList.find(
     (contract) => contract.name === 'ENSRegistry'
   )
   const ROOT_NODE =
     '0x0000000000000000000000000000000000000000000000000000000000000000'
 
-  const rootOwner = await ensRegistry.owner(ROOT_NODE)
+  const rootOwner = await EnsRegistry.owner(ROOT_NODE)
   const [owner, addr1] = await ethers.getSigners()
   const account = await owner.getAddress()
 
-  const subDomainRegistrar = await deploy('SubdomainRegistrar', [
+  const SubDomainRegistrar = await deploy('SubdomainRegistrar', [
     addresses['ENSRegistry'],
   ])
-  const publicResolver = await deploy('PublicResolver', [
+  const RestrictedNameWrapper = await deploy('RestrictedNameWrapper', [
+    addresses['ENSRegistry'],
+  ])
+  const PublicResolver = await deploy('PublicResolver', [
     addresses['ENSRegistry'],
   ])
 
   // setup .eth
-  await ensRegistry.setSubnodeOwner(
+  await EnsRegistry.setSubnodeOwner(
     ROOT_NODE,
     utils.keccak256(utils.toUtf8Bytes('eth')),
     account
   )
 
   // setup ens.eth
-  await ensRegistry.setSubnodeOwner(
+  await EnsRegistry.setSubnodeOwner(
     namehash('eth'),
     utils.keccak256(utils.toUtf8Bytes('ens')),
     account
   )
 
-  const ethOwner = await ensRegistry.owner(namehash('eth'))
-  const ensEthOwner = await ensRegistry.owner(namehash('ens.eth'))
+  const ethOwner = await EnsRegistry.owner(namehash('eth'))
+  const ensEthOwner = await EnsRegistry.owner(namehash('ens.eth'))
 
   console.log('ethOwner', ethOwner)
   console.log('ensEthOwner', ensEthOwner)
@@ -112,9 +119,9 @@ async function main() {
 
   // setup subdomain registrar
   //console.log(subDomainRegistrar)
-  await subDomainRegistrar.configureDomain('ens', '1000000', 0)
-  await ensRegistry.setOwner(namehash('ens.eth'), subDomainRegistrar.address)
-  await subDomainRegistrar.register(
+  await SubDomainRegistrar.configureDomain('ens', '1000000', 0)
+  await EnsRegistry.setOwner(namehash('ens.eth'), SubDomainRegistrar.address)
+  await SubDomainRegistrar.register(
     '0x5cee339e13375638553bdf5a6e36ba80fb9f6a4f0783680884d92b558aa471da',
     'awesome',
     account,
