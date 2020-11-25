@@ -4,6 +4,7 @@ import "@nomiclabs/buidler/console.sol";
 import "../interfaces/ENS.sol";
 import "../interfaces/Resolver.sol";
 import "../interfaces/ISubdomainRegistrar.sol";
+//import "../interfaces/IRestrictedNameWrapper.sol";
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
@@ -28,6 +29,9 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
     mapping(bytes32 => Domain) domains;
 
     ENS public ens;
+    IRestrictedNameWrapper public wrapper;
+
+    //RestrictedNameWrapper public wrapper;
 
     function owner(bytes32 label) public override view returns (address) {
         // Check owner of NFT
@@ -57,8 +61,12 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         _;
     }
 
-    constructor(ENS _ens) public ERC721("ENS Name", "ENS") {
+    constructor(ENS _ens, IRestrictedNameWrapper _wrapper)
+        public
+        ERC721("ENS Name", "ENS")
+    {
         ens = _ens;
+        wrapper = _wrapper;
     }
 
     function configureDomain(
@@ -226,4 +234,8 @@ contract SubdomainRegistrar is ERC721, ISubdomainRegistrar {
         require(_isApprovedOrOwner(msg.sender, id));
         ens.setSubnodeOwner(TLD_NODE, bytes32(id), subdomainOwner);
     }
+}
+
+interface IRestrictedNameWrapper {
+    function wrap(bytes32 node) external;
 }

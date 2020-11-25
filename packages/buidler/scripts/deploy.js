@@ -82,14 +82,16 @@ async function main() {
   const [owner, addr1] = await ethers.getSigners()
   const account = await owner.getAddress()
 
-  const SubDomainRegistrar = await deploy('SubdomainRegistrar', [
-    addresses['ENSRegistry'],
-  ])
   const RestrictedNameWrapper = await deploy('RestrictedNameWrapper', [
     addresses['ENSRegistry'],
   ])
   const PublicResolver = await deploy('PublicResolver', [
     addresses['ENSRegistry'],
+  ])
+
+  const SubDomainRegistrar = await deploy('SubdomainRegistrar', [
+    addresses['ENSRegistry'],
+    addresses['RestrictedNameWrapper'],
   ])
 
   // setup .eth
