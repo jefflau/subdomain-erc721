@@ -1,6 +1,11 @@
 import "../interfaces/ENS.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
+// todo
+// add ERC721
+// change ownership to use erc721
+// mint token on wrap
+
 contract RestrictedNameWrapper is ERC721 {
     ENS public ens;
     mapping(bytes32 => address) public nameOwners;
@@ -11,16 +16,33 @@ contract RestrictedNameWrapper is ERC721 {
     }
 
     modifier isOwner(bytes32 node) {
-        address owner = nameOwners[node];
-        require(owner == msg.sender || operators[owner][msg.sender]);
+        address owner = ownerOf(uint256(node));
+        require(owner == msg.sender || isApprovedForAll(owner, msg.sender));
         _;
+    }
+
+    /**
+     * @dev Mint Erc721 for the subdomain
+     * @param id The token ID (keccak256 of the label).
+     * @param subdomainOwner The address that should own the registration.
+     * @param tokenURI tokenURI address
+     */
+
+    function mintERC721(
+        uint256 id,
+        address subdomainOwner,
+        string memory tokenURI
+    ) public returns (uint256) {
+        _mint(subdomainOwner, id);
+        _setTokenURI(id, tokenURI);
+        return id;
     }
 
     function wrap(bytes32 node) public {
         address owner = ens.owner(node);
         require(owner == msg.sender || ens.isApprovedForAll(owner, msg.sender));
         ens.setOwner(node, address(this));
-        nameOwners[node] = owner;
+        mintERC721(uint256(node), owner, ""); //TODO add URI
     }
 
     function setRecord(
@@ -61,7 +83,7 @@ contract RestrictedNameWrapper is ERC721 {
     }
 
     function setOwner(bytes32 node, address owner) public isOwner(node) {
-        nameOwners[node] = owner;
+        safeTransferFrom(msg.sender, owner, uint256(node));
     }
 
     function setTTL(bytes32 node, uint64 ttl) public isOwner(node) {
