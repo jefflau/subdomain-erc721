@@ -22,7 +22,7 @@ contract ENSRegistry is ENS {
         console.log("owner", owner, msg.sender);
         require(
             owner == msg.sender || operators[owner][msg.sender],
-            "owner is not sender or operator"
+            "sender is not owner oroperator"
         );
         _;
     }

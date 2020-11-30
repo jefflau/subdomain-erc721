@@ -22,8 +22,6 @@ interface ISubdomainRegistrar {
         uint256 expirationDate
     );
 
-    function owner(bytes32 label) external view returns (address);
-
     // InterfaceID of these four methods is 0xc1b15f5a
     // function query(bytes32 label, string calldata subdomain)
     //     external

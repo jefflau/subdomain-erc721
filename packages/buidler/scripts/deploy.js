@@ -113,18 +113,38 @@ async function main() {
 
   console.log('ethOwner', ethOwner)
   console.log('ensEthOwner', ensEthOwner)
-  // OR
-  // custom deploy (to use deployed addresses dynamically for example:)
-  // const exampleToken = await deploy("ExampleToken")
-  // const examplePriceOracle = await deploy("ExamplePriceOracle")
-  // const smartContractWallet = await deploy("SmartContractWallet",[exampleToken.address,examplePriceOracle.address])
 
-  // setup subdomain registrar
-  //console.log(subDomainRegistrar)
-  await SubDomainRegistrar.configureDomain('ens', '1000000', 0)
-  await EnsRegistry.setOwner(namehash('ens.eth'), SubDomainRegistrar.address)
+  // console.log(
+  //   'ens.setApprovalForAll RestrictedNameWrapper',
+  //   account,
+  //   addresses['RestrictedNameWrapper']
+  // )
+  // // make wrapper approved for account owning ens.eth
+  // await EnsRegistry.setApprovalForAll(addresses['RestrictedNameWrapper'], true)
+
+  console.log(
+    'ens.setApprovalForAll SubDomainRegistrar',
+    SubDomainRegistrar.address,
+    true
+  )
+  await EnsRegistry.setApprovalForAll(SubDomainRegistrar.address, true)
+  console.log(
+    'RestrictedNameWrapper.setApprovalForAll SubDomainRegistrar',
+    SubDomainRegistrar.address,
+    true
+  )
+  await RestrictedNameWrapper.setApprovalForAll(
+    SubDomainRegistrar.address,
+    true
+  )
+
+  console.log('SubDomainRegistrar.configureDomain()')
+  await SubDomainRegistrar.configureDomain(namehash('ens.eth'), '1000000', 0)
+  //await EnsRegistry.setOwner(namehash('ens.eth'), SubDomainRegistrar.address)
+  //console.log('EnsRegistry.setOwner()')
+  console.log('SubDomainRegistrar.register()')
   await SubDomainRegistrar.register(
-    '0x5cee339e13375638553bdf5a6e36ba80fb9f6a4f0783680884d92b558aa471da',
+    namehash('ens.eth'),
     'awesome',
     account,
     account,

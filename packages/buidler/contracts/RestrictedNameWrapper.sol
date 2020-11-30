@@ -1,24 +1,50 @@
 import "../interfaces/ENS.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "../interfaces/IRestrictedNameWrapper.sol";
 
 // todo
 // add ERC721
 // change ownership to use erc721
 // mint token on wrap
 
-contract RestrictedNameWrapper is ERC721 {
+contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     ENS public ens;
-    mapping(bytes32 => address) public nameOwners;
-    mapping(address => mapping(address => bool)) operators;
+    mapping(bytes32 => uint256) public fuses;
 
     constructor(ENS _ens) public ERC721("ENS Name", "ENS") {
         ens = _ens;
     }
 
-    modifier isOwner(bytes32 node) {
+    modifier ownerOnly(bytes32 node) {
         address owner = ownerOf(uint256(node));
         require(owner == msg.sender || isApprovedForAll(owner, msg.sender));
         _;
+    }
+
+    function canUnwrap(bytes32 node) public view returns (bool) {
+        return fuses[node] & CAN_UNWRAP != 0;
+    }
+
+    function canSetTTL(bytes32 node) public view returns (bool) {
+        return fuses[node] & CAN_UNWRAP != 0 || fuses[node] & CAN_SET_TTL != 0;
+    }
+
+    function canSetResolver(bytes32 node) public view returns (bool) {
+        return
+            fuses[node] & CAN_UNWRAP != 0 ||
+            fuses[node] & CAN_SET_RESOLVER != 0;
+    }
+
+    function canCreateSubdomain(bytes32 node) public view returns (bool) {
+        return
+            fuses[node] & CAN_UNWRAP != 0 ||
+            fuses[node] & CAN_CREATE_SUBDOMAIN != 0;
+    }
+
+    function canReplaceSubdomain(bytes32 node) public view returns (bool) {
+        return
+            fuses[node] & CAN_UNWRAP != 0 ||
+            fuses[node] & CAN_REPLACE_SUBDOMAIN != 0;
     }
 
     /**
@@ -32,17 +58,50 @@ contract RestrictedNameWrapper is ERC721 {
         uint256 id,
         address subdomainOwner,
         string memory tokenURI
-    ) public returns (uint256) {
+    ) private returns (uint256) {
         _mint(subdomainOwner, id);
         _setTokenURI(id, tokenURI);
         return id;
     }
 
-    function wrap(bytes32 node) public {
+    function wrap(
+        bytes32 node,
+        uint256 _fuses,
+        address wrappedOwner
+    ) public override {
+        fuses[node] = _fuses;
         address owner = ens.owner(node);
         require(owner == msg.sender || ens.isApprovedForAll(owner, msg.sender));
         ens.setOwner(node, address(this));
-        mintERC721(uint256(node), owner, ""); //TODO add URI
+        mintERC721(uint256(node), wrappedOwner, ""); //TODO add URI
+    }
+
+    function unwrap(bytes32 node, address owner)
+        public
+        override
+        ownerOnly(node)
+    {
+        require(canUnwrap(node), "Domain is unwrappable");
+
+        //set fuses back to normal - not sure if we need this?
+        fuses[node] = 0;
+        _burn(uint256(node));
+        ens.setOwner(node, owner);
+    }
+
+    function burnFuses(bytes32 node, uint256 _fuses) public ownerOnly(node) {
+        fuses[node] &= _fuses;
+    }
+
+    function setSubnodeRecordAndWrap(
+        bytes32 node,
+        bytes32 label,
+        address owner,
+        address resolver,
+        uint64 ttl
+    ) external {
+        setSubnodeRecord(node, label, address(this), resolver, ttl);
+        mintERC721(uint256(node), owner, "");
     }
 
     function setRecord(
@@ -51,6 +110,7 @@ contract RestrictedNameWrapper is ERC721 {
         address resolver,
         uint64 ttl
     ) external {
+        require(canSetResolver(node) && canSetTTL(node));
         setResolver(node, resolver);
         setTTL(node, ttl);
         setOwner(node, owner);
@@ -62,54 +122,59 @@ contract RestrictedNameWrapper is ERC721 {
         address owner,
         address resolver,
         uint64 ttl
-    ) external isOwner(node) {
+    ) public ownerOnly(node) {
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
-        require(ens.owner(subnode) == address(0));
-        ens.setSubnodeRecord(node, label, owner, resolver, ttl);
+        if (canCreateSubdomain(node) && canReplaceSubdomain(node)) {
+            ens.setSubnodeRecord(node, label, owner, resolver, ttl);
+        }
+
+        if (canCreateSubdomain(node)) {
+            require(
+                ens.owner(subnode) == address(0),
+                "Subdomain already registered"
+            );
+            ens.setSubnodeRecord(node, label, owner, resolver, ttl);
+        }
     }
+
+    //setSubnodeOwner. ownerOnly checks
 
     function setSubnodeOwner(
         bytes32 node,
         bytes32 label,
         address owner
-    ) external isOwner(node) returns (bytes32) {
+    ) public override ownerOnly(node) returns (bytes32) {
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
-        require(ens.owner(subnode) == address(0));
+        require(ens.owner(subnode) == address(0) || canReplaceSubdomain(node));
         ens.setSubnodeOwner(node, label, owner);
+        mintERC721(uint256(subnode), owner, "");
     }
 
-    function setResolver(bytes32 node, address resolver) public isOwner(node) {
+    function setResolver(bytes32 node, address resolver)
+        public
+        override
+        ownerOnly(node)
+    {
+        require(
+            canSetResolver(node),
+            "Fuse already blown for setting resolver"
+        );
         ens.setResolver(node, resolver);
     }
 
-    function setOwner(bytes32 node, address owner) public isOwner(node) {
+    function setOwner(bytes32 node, address owner)
+        public
+        override
+        ownerOnly(node)
+    {
         safeTransferFrom(msg.sender, owner, uint256(node));
     }
 
-    function setTTL(bytes32 node, uint64 ttl) public isOwner(node) {
+    function setTTL(bytes32 node, uint64 ttl) public ownerOnly(node) {
+        require(canSetTTL(node), "Fuse already blown for setting TTL");
         ens.setTTL(node, ttl);
     }
-
-    // function setApprovalForAll(address operator, bool approved) external {
-    //     operators[msg.sender][operator] = approved;
-    // }
 }
-
-// contract SubdomainRegistrar {
-//     ENS public ens;
-//     RestrictiveWrapper public wrapper;
-
-//     constructor(ENS _ens, RestrictiveWrapper _wrapper) {
-//         ens = _ens;
-//         wrapper = _wrapper;
-//         ens.setApprovalForAll(address(wrapper), true);
-//     }
-
-//     function configure(bytes32 name) {
-//         ens.setOwner(name, address(this));
-//         wrapper.wrap(name, msg.sender);
-//     }
-// }
 
 // 1. ETHRegistrarController.commit()
 // 2. ETHRegistrarController.registerWithConfig()
