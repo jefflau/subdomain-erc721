@@ -136,7 +136,6 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
         }
     }
 
-    //setSubnodeOwner. ownerOnly checks
 
     function setSubnodeOwner(
         bytes32 node,
