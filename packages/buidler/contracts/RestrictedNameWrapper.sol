@@ -42,7 +42,7 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     }
 
     function canReplaceSubdomain(bytes32 node) public view returns (bool) {
-        return fuses[node] & CAN_UNWRAP | CAN_REPLACE_SUBDOMAIN) != 0;
+        return fuses[node] & (CAN_UNWRAP | CAN_REPLACE_SUBDOMAIN) != 0;
     }
 
     /**
@@ -135,7 +135,6 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
             return ens.setSubnodeRecord(node, label, owner, resolver, ttl);
         }
     }
-
 
     function setSubnodeOwner(
         bytes32 node,

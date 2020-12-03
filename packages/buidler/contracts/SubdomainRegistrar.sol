@@ -104,9 +104,6 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
         address owner = ens.owner(subnode);
         console.log("owner in registry", owner);
-        // Set the subdomain's resolver
-        //wrapper.setResolver(subnode, address(resolver));
-        //don't need this becausae setSubnodeRecord wikll do it
 
         // Problem - Current Public Resolver checks ENS registry for ownership. Owner will be the Restrivtve Wrapper
         // Possible solution A - use PublicResolver that knows how to check Restrictive Wrapper
@@ -120,8 +117,6 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
 
         // Pass ownership of the new subdomain to the registrant
         wrapper.setOwner(subnode, subdomainOwner);
-
-        // Mint the ERC721 token
     }
 
     function register(
