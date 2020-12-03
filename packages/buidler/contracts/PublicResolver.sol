@@ -1,5 +1,6 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
+import "@nomiclabs/buidler/console.sol";
 
 import "./profiles/AddrResolver.sol";
 import "./profiles/ContentHashResolver.sol";
@@ -55,6 +56,11 @@ contract PublicResolver is AddrResolver, ContentHashResolver {
 
     function isAuthorised(bytes32 node) internal override view returns (bool) {
         address owner = ens.owner(node);
+        console.log("owner");
+        console.log(owner);
+        console.log("authorised");
+        console.logBool(authorisations[node][owner][msg.sender]);
+
         return owner == msg.sender || authorisations[node][owner][msg.sender];
     }
 

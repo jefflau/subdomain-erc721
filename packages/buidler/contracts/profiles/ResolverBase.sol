@@ -17,7 +17,7 @@ abstract contract ResolverBase {
     function isAuthorised(bytes32 node) internal virtual view returns (bool);
 
     modifier authorised(bytes32 node) {
-        require(isAuthorised(node));
+        require(isAuthorised(node), "not authorised");
         _;
     }
 

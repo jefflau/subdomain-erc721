@@ -1,6 +1,7 @@
 import "../interfaces/ENS.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IRestrictedNameWrapper.sol";
+import "@nomiclabs/buidler/console.sol";
 
 // todo
 // add ERC721
@@ -26,25 +27,22 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     }
 
     function canSetTTL(bytes32 node) public view returns (bool) {
-        return fuses[node] & CAN_UNWRAP != 0 || fuses[node] & CAN_SET_TTL != 0;
+        //return fuses[node] & CAN_UNWRAP != 0 || fuses[node] & CAN_SET_TTL != 0;
+        return fuses[node] & (CAN_UNWRAP | CAN_SET_TTL) != 0;
     }
 
+    //00001 | 10000 = 10001 // create a bitmask
+
     function canSetResolver(bytes32 node) public view returns (bool) {
-        return
-            fuses[node] & CAN_UNWRAP != 0 ||
-            fuses[node] & CAN_SET_RESOLVER != 0;
+        return fuses[node] & (CAN_UNWRAP | CAN_SET_RESOLVER) != 0;
     }
 
     function canCreateSubdomain(bytes32 node) public view returns (bool) {
-        return
-            fuses[node] & CAN_UNWRAP != 0 ||
-            fuses[node] & CAN_CREATE_SUBDOMAIN != 0;
+        return fuses[node] & (CAN_UNWRAP | CAN_CREATE_SUBDOMAIN) != 0;
     }
 
     function canReplaceSubdomain(bytes32 node) public view returns (bool) {
-        return
-            fuses[node] & CAN_UNWRAP != 0 ||
-            fuses[node] & CAN_REPLACE_SUBDOMAIN != 0;
+        return fuses[node] & CAN_UNWRAP | CAN_REPLACE_SUBDOMAIN) != 0;
     }
 
     /**
@@ -71,7 +69,10 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     ) public override {
         fuses[node] = _fuses;
         address owner = ens.owner(node);
-        require(owner == msg.sender || ens.isApprovedForAll(owner, msg.sender));
+        require(
+            owner == msg.sender || ens.isApprovedForAll(owner, msg.sender),
+            "not approved and isn't sender"
+        );
         ens.setOwner(node, address(this));
         mintERC721(uint256(node), wrappedOwner, ""); //TODO add URI
     }
@@ -125,15 +126,13 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     ) public ownerOnly(node) {
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
         if (canCreateSubdomain(node) && canReplaceSubdomain(node)) {
-            ens.setSubnodeRecord(node, label, owner, resolver, ttl);
-        }
-
-        if (canCreateSubdomain(node)) {
+            return ens.setSubnodeRecord(node, label, owner, resolver, ttl);
+        } else if (canCreateSubdomain(node)) {
             require(
                 ens.owner(subnode) == address(0),
                 "Subdomain already registered"
             );
-            ens.setSubnodeRecord(node, label, owner, resolver, ttl);
+            return ens.setSubnodeRecord(node, label, owner, resolver, ttl);
         }
     }
 
@@ -145,9 +144,22 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
         address owner
     ) public override ownerOnly(node) returns (bytes32) {
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
+
         require(ens.owner(subnode) == address(0) || canReplaceSubdomain(node));
         ens.setSubnodeOwner(node, label, owner);
-        mintERC721(uint256(subnode), owner, "");
+    }
+
+    function setSubnodeRecordAndWrap(
+        bytes32 node,
+        bytes32 label,
+        address owner,
+        address resolver,
+        uint64 ttl,
+        uint256 _fuses
+    ) public override returns (bytes32) {
+        bytes32 subnode = keccak256(abi.encodePacked(node, label));
+        setSubnodeRecord(node, label, owner, resolver, ttl);
+        wrap(subnode, _fuses, owner);
     }
 
     function setResolver(bytes32 node, address resolver)
@@ -155,6 +167,8 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
         override
         ownerOnly(node)
     {
+        console.log("node");
+        console.logBytes32(node);
         require(
             canSetResolver(node),
             "Fuse already blown for setting resolver"

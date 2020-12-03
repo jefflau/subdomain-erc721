@@ -10,6 +10,15 @@ abstract contract IRestrictedNameWrapper is IERC721 {
 
     function unwrap(bytes32 node, address owner) public virtual;
 
+    function setSubnodeRecordAndWrap(
+        bytes32 node,
+        bytes32 label,
+        address owner,
+        address resolver,
+        uint64 ttl,
+        uint256 _fuses
+    ) public virtual returns (bytes32);
+
     function setSubnodeOwner(
         bytes32 node,
         bytes32 label,

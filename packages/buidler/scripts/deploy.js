@@ -143,6 +143,7 @@ async function main() {
   //await EnsRegistry.setOwner(namehash('ens.eth'), SubDomainRegistrar.address)
   //console.log('EnsRegistry.setOwner()')
   console.log('SubDomainRegistrar.register()')
+  console.log('hash of awesome.ens.eth', namehash('awesome.ens.eth'))
   await SubDomainRegistrar.register(
     namehash('ens.eth'),
     'awesome',

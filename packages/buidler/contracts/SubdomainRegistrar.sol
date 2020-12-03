@@ -91,19 +91,32 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
         bytes32 node,
         bytes32 label,
         address subdomainOwner,
-        Resolver resolver
+        Resolver resolver,
+        address addr
     ) internal {
         // Get the subdomain so we can configure it
-        console.log("node");
-        console.logBytes32(node);
-        wrapper.setSubnodeOwner(node, label, address(this));
+        console.log("doRegistration", address(this));
+        wrapper.setSubnodeRecordAndWrap(
+            node,
+            label,
+            address(this),
+            address(resolver),
+            0,
+            255
+        );
+        //set the owner to this contract so it can setAddr()
 
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
+        address owner = ens.owner(subnode);
+        console.log("owner in registry", owner);
         // Set the subdomain's resolver
-        wrapper.setResolver(subnode, address(resolver));
+        //wrapper.setResolver(subnode, address(resolver));
+        //don't need this becausae setSubnodeRecord wikll do it
 
         // Set the address record on the resolver
         resolver.setAddr(subnode, subdomainOwner);
+        // check if the address is != 0 and then set addr
+        // reason to check some resolvers don't have setAddr
 
         // Pass ownership of the new subdomain to the registrant
         wrapper.setOwner(subnode, subdomainOwner);
@@ -167,7 +180,8 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
             node,
             subdomainLabel,
             subdomainOwner,
-            Resolver(resolver)
+            Resolver(resolver),
+            subdomainOwner
         );
 
         emit NewRegistration(
