@@ -18,9 +18,19 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
     }
 
     modifier ownerOnly(bytes32 node) {
-        address owner = ownerOf(uint256(node));
-        require(owner == msg.sender || isApprovedForAll(owner, msg.sender));
+        require(isOwnerOrApproved(node, msg.sender));
         _;
+    }
+
+    function isOwnerOrApproved(bytes32 node, address addr)
+        public
+        override
+        returns (bool)
+    {
+        //memory owner = ;
+        return
+            ownerOf(uint256(node)) == addr ||
+            isApprovedForAll(ownerOf(uint256(node)), addr);
     }
 
     function canUnwrap(bytes32 node) public view returns (bool) {
@@ -76,16 +86,6 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
         );
         ens.setOwner(node, address(this));
         mintERC721(uint256(node), wrappedOwner, ""); //TODO add URI
-    }
-
-    function setAuthorisationForResolver(
-        bytes32 node,
-        address target,
-        bool isAuthorised,
-        Resolver resolver
-    ) public override ownerOnly(node) {
-        //set authorisation for the resolver if they own the ndoe in the wrapper
-        resolver.setAuthorisation(node, target, isAuthorised);
     }
 
     function unwrap(bytes32 node, address owner)

@@ -5,6 +5,7 @@ import "@nomiclabs/buidler/console.sol";
 import "./profiles/AddrResolver.sol";
 import "./profiles/ContentHashResolver.sol";
 import "../interfaces/ENS.sol";
+import "../interfaces/IRestrictedNameWrapper.sol";
 
 /**
  * A simple resolver anyone can use; only allows the owner of a node to set its
@@ -56,8 +57,19 @@ contract PublicResolver is AddrResolver, ContentHashResolver {
 
     function isAuthorised(bytes32 node) internal override view returns (bool) {
         address owner = ens.owner(node);
-        console.log("owner");
-        console.logBool(authorisations[node][owner][msg.sender]);
+        // if owner is contract, then use wrapper interface and call ownerOf
+        if (true) {
+            // TODO check owner is a contract
+            console.log("permissions");
+
+            //Assumes ERC721 ownership interface
+            IRestrictedNameWrapper wrapper = IRestrictedNameWrapper(owner);
+            return
+                owner == msg.sender ||
+                authorisations[node][owner][msg.sender] ||
+                wrapper.ownerOf(uint256(node)) == msg.sender ||
+                wrapper.isApprovedForAll(owner, msg.sender);
+        }
 
         return owner == msg.sender || authorisations[node][owner][msg.sender];
     }
@@ -86,3 +98,5 @@ contract PublicResolver is AddrResolver, ContentHashResolver {
         return super.supportsInterface(interfaceID);
     }
 }
+
+// wrapper aware

@@ -110,22 +110,23 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
         // Possible solution A - use PublicResolver that knows how to check Restrictive Wrapper
         // Possible solution B - Deploy an OwnerResolver for each subdomain name
         // Possible solution C - Separate Public Resolver that uses Restrictive Name Wrapper
+        // Possible solution D - wrap setAuthorisation inside RestrictedWrapper - X (don't want the wrapper to know about resolvers)
 
         // Set the address record on the resolver
-        console.log("setAuthorisationForResolver");
-        wrapper.setAuthorisationForResolver(
-            subnode,
-            address(this),
-            true,
-            resolver
-        );
-        console.log("setAuthorisationForResolver");
-        wrapper.setAuthorisationForResolver(
-            subnode,
-            address(owner),
-            true,
-            resolver
-        );
+        // console.log("setAuthorisationForResolver");
+        // wrapper.setAuthorisationForResolver(
+        //     subnode,
+        //     address(this),
+        //     true,
+        //     resolver
+        // );
+        // console.log("setAuthorisationForResolver");
+        // wrapper.setAuthorisationForResolver(
+        //     subnode,
+        //     address(owner),
+        //     true,
+        //     resolver
+        // );
         console.log("setAddr");
         resolver.setAddr(subnode, subdomainOwner);
         address addrVar = resolver.addr(subnode);

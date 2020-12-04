@@ -26,12 +26,10 @@ abstract contract IRestrictedNameWrapper is IERC721 {
         address owner
     ) public virtual returns (bytes32);
 
-    function setAuthorisationForResolver(
-        bytes32 node,
-        address target,
-        bool isAuthorised,
-        Resolver resolver
-    ) public virtual;
+    function isOwnerOrApproved(bytes32 node, address addr)
+        public
+        virtual
+        returns (bool);
 
     function setResolver(bytes32 node, address resolver) public virtual;
 
