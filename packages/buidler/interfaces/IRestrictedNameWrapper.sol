@@ -1,5 +1,6 @@
 pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "./Resolver.sol";
 
 abstract contract IRestrictedNameWrapper is IERC721 {
     function wrap(
@@ -24,6 +25,13 @@ abstract contract IRestrictedNameWrapper is IERC721 {
         bytes32 label,
         address owner
     ) public virtual returns (bytes32);
+
+    function setAuthorisationForResolver(
+        bytes32 node,
+        address target,
+        bool isAuthorised,
+        Resolver resolver
+    ) public virtual;
 
     function setResolver(bytes32 node, address resolver) public virtual;
 

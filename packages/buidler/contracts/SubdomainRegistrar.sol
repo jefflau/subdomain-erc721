@@ -100,6 +100,7 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
             255
         );
         //set the owner to this contract so it can setAddr()
+        // This doesn't work as the wrap turns the owner back to the wrapper
 
         bytes32 subnode = keccak256(abi.encodePacked(node, label));
         address owner = ens.owner(subnode);
@@ -111,7 +112,26 @@ contract SubdomainRegistrar is ISubdomainRegistrar {
         // Possible solution C - Separate Public Resolver that uses Restrictive Name Wrapper
 
         // Set the address record on the resolver
+        console.log("setAuthorisationForResolver");
+        wrapper.setAuthorisationForResolver(
+            subnode,
+            address(this),
+            true,
+            resolver
+        );
+        console.log("setAuthorisationForResolver");
+        wrapper.setAuthorisationForResolver(
+            subnode,
+            address(owner),
+            true,
+            resolver
+        );
+        console.log("setAddr");
         resolver.setAddr(subnode, subdomainOwner);
+        address addrVar = resolver.addr(subnode);
+        console.log(addrVar);
+        // Currently fails as owner is stil the Restrictive Wrapper
+
         // check if the address is != 0 and then set addr
         // reason to check some resolvers don't have setAddr
 

@@ -1,4 +1,5 @@
 import "../interfaces/ENS.sol";
+import "../interfaces/Resolver.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IRestrictedNameWrapper.sol";
 import "@nomiclabs/buidler/console.sol";
@@ -75,6 +76,16 @@ contract RestrictedNameWrapper is ERC721, IRestrictedNameWrapper {
         );
         ens.setOwner(node, address(this));
         mintERC721(uint256(node), wrappedOwner, ""); //TODO add URI
+    }
+
+    function setAuthorisationForResolver(
+        bytes32 node,
+        address target,
+        bool isAuthorised,
+        Resolver resolver
+    ) public override ownerOnly(node) {
+        //set authorisation for the resolver if they own the ndoe in the wrapper
+        resolver.setAuthorisation(node, target, isAuthorised);
     }
 
     function unwrap(bytes32 node, address owner)
